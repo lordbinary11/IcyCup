@@ -23,6 +23,7 @@ import {
   YoghurtRefillLine,
   YoghurtSectionBIncome,
 } from "@/lib/types";
+import { canEditSheet, getEditabilityMessage, type UserRole } from "@/lib/permissions";
 
 type Params = {
   sheetId: string;
@@ -158,6 +159,8 @@ export default function SheetPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const pdfRef = useRef<HTMLDivElement | null>(null);
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
   const [branches, setBranches] = useState<Array<{ id: string; name: string; code: string }>>(
@@ -193,17 +196,32 @@ export default function SheetPage() {
   }, [loadSheet]);
 
   useEffect(() => {
-    // Fetch branches for drop-downs
+    // Fetch branches and user role
     void (async () => {
-      const { data: branchesData } = await supabase.from("branches").select("id, name, code");
-      if (branchesData) {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const [branchesResult, profileResult] = await Promise.all([
+        supabase.from("branches").select("id, name, code"),
+        user 
+          ? supabase.from("user_profiles").select("role").eq("user_id", user.id).single()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+      
+      if (branchesResult.data) {
         setBranches(
-          branchesData.map((b: { id: string; name: string | null; code: string | null }) => ({
+          branchesResult.data.map((b: { id: string; name: string | null; code: string | null }) => ({
             id: b.id,
             name: b.name ?? "",
             code: b.code ?? "",
           }))
         );
+      }
+      
+      if (profileResult.data?.role) {
+        setUserRole(profileResult.data.role as UserRole);
+      } else {
+        // If profile fetch fails, default to branch_user to allow editing
+        setUserRole('branch_user');
       }
     })();
   }, [supabase]);
@@ -342,9 +360,13 @@ export default function SheetPage() {
     }
     setSaving(true);
     setError(null);
+    setSuccessMessage(null);
     try {
       await submitSheet(supabase, data);
       await loadSheet({ silent: true });
+      setSuccessMessage("Sheet submitted successfully!");
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to submit sheet";
       setError(message);
@@ -369,6 +391,17 @@ export default function SheetPage() {
     );
   }
 
+  // Check if user can edit based on role and time-based rules
+  // Wait for user role to load before determining editability
+  const editPermission = userRole 
+    ? canEditSheet(userRole, data.header.sheet_date, data.header.locked)
+    : null;
+  
+  const isEditable = editPermission?.canEdit ?? false;
+  const editabilityMessage = userRole 
+    ? getEditabilityMessage(userRole, data.header.sheet_date, data.header.locked)
+    : null;
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
       <div
@@ -388,19 +421,38 @@ export default function SheetPage() {
                 Date: {data.header.sheet_date} · Supervisor:{" "}
                 {data.header.supervisor_name ?? "—"}
               </p>
+              {data.header.locked && data.header.submitted_by_name && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Submitted by: {data.header.submitted_by_name} ({data.header.submitted_by_role})
+                  {data.header.submitted_at && ` on ${new Date(data.header.submitted_at).toLocaleString()}`}
+                </p>
+              )}
             </div>
             <div className="text-right text-sm">
-              <div
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                  data.header.locked
-                    ? "bg-amber-100 text-amber-800"
-                    : "bg-emerald-100 text-emerald-800"
-                }`}
-              >
-                {data.header.locked ? "Locked" : "Editable"}
-              </div>
+              {userRole ? (
+                <>
+                  <div
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                      isEditable
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {isEditable ? "Editable" : "Read-Only"}
+                  </div>
+                  {editabilityMessage && (
+                    <p className="mt-1 text-xs text-slate-600 max-w-xs">
+                      {editabilityMessage}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="inline-flex rounded-full px-3 py-1 text-xs font-semibold bg-slate-100 text-slate-600">
+                  Loading...
+                </div>
+              )}
               <div className="mt-2 flex items-center justify-end gap-2">
-                {!data.header.locked && (
+                {isEditable && (
                   <button
                     className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 shadow-sm disabled:opacity-50"
                     disabled={saving}
@@ -431,6 +483,11 @@ export default function SheetPage() {
               {error}
             </p>
           )}
+          {successMessage && (
+            <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              ✓ {successMessage}
+            </p>
+          )}
           {saving && (
             <p className="rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-xs text-slate-700">
               Saving…
@@ -440,7 +497,7 @@ export default function SheetPage() {
 
         <PastriesRecord
           lines={data.pastries}
-          locked={data.header.locked}
+          locked={!isEditable}
           branches={branches}
           onChange={(id, patch) =>
             updateLocalData((prev) => ({
@@ -465,7 +522,7 @@ export default function SheetPage() {
             grand: data.header.grand_total,
             pastriesIncome: data.header.total_pastries_income,
           }}
-          locked={data.header.locked}
+          locked={!isEditable}
           onUpdate={(table, id, patch) => {
             updateLocalData((prev) => {
               if (table === "yoghurt_headers") {
@@ -517,8 +574,7 @@ export default function SheetPage() {
           cashOnHand={data.header.cash_on_hand}
           momo={data.header.momo_amount}
           grandTotal={data.header.grand_total}
-          cashDelta={data.header.cash_balance_delta}
-          locked={data.header.locked}
+          locked={!isEditable}
           onChange={(patch) =>
             updateLocalData((prev) => ({
               ...prev,
@@ -529,7 +585,7 @@ export default function SheetPage() {
 
         <MaterialsRecord
           lines={data.materials}
-          locked={data.header.locked}
+          locked={!isEditable}
           branches={branches}
           onChange={(id, patch) =>
             updateLocalData((prev) => ({
@@ -544,7 +600,7 @@ export default function SheetPage() {
         <CurrencyNotesRecord
           notes={data.currencyNotes}
           notesTotal={data.header.currency_total_cash ?? 0}
-          locked={data.header.locked}
+          locked={!isEditable}
           onChange={(id, patch) =>
             updateLocalData((prev) => ({
               ...prev,
@@ -557,14 +613,14 @@ export default function SheetPage() {
 
         <StaffAttendance
           staff={data.staff}
-          locked={data.header.locked}
+          locked={!isEditable}
           onAdd={handleStaffAdd}
           onDelete={handleStaffDelete}
         />
 
         <ExtraExpenses
           expenses={data.expenses}
-          locked={data.header.locked}
+          locked={!isEditable}
           onAdd={handleExpenseAdd}
           onDelete={handleExpenseDelete}
         />
@@ -576,7 +632,7 @@ export default function SheetPage() {
 function SectionFrame({
   title,
   children,
-  defaultOpen = true,
+  defaultOpen = false,
 }: {
   title: string;
   children: React.ReactNode;
@@ -615,7 +671,7 @@ function PastriesRecord({
       <div className="overflow-x-auto">
         <div className="grid min-w-[700px] grid-cols-8 text-[11px] font-semibold uppercase text-slate-600">
           <div className="border border-slate-200 bg-slate-50 px-2 py-1">Item</div>
-          <div className="border border-slate-200 bg-slate-50 px-2 py-1">Received</div>
+          <div className="border border-slate-200 bg-slate-50 px-2 py-1">Opening</div>
           <div className="border border-slate-200 bg-slate-50 px-2 py-1">Rec From</div>
           <div className="border border-slate-200 bg-slate-50 px-2 py-1">Trans To</div>
           <div className="border border-slate-200 bg-slate-50 px-2 py-1">Sold</div>
@@ -650,23 +706,30 @@ function PastriesRecord({
                   })
                 }
               />
-              <select
-                className="flex-1 px-1 py-1 text-[10px]"
-                disabled={locked}
-                value={line.received_from_branch_id ?? ""}
-                onChange={(e) =>
-                  onChange(line.id, {
-                    received_from_branch_id: e.target.value || null,
-                  })
-                }
-              >
-                <option value="">Branch</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code}
-                  </option>
-                ))}
-              </select>
+              {locked ? (
+                <div className="flex-1 px-1 py-1 text-[10px] text-slate-700">
+                  {line.received_from_branch_id 
+                    ? (line.received_from_branch_name || branches.find(b => b.id === line.received_from_branch_id)?.name || "Unknown")
+                    : "—"}
+                </div>
+              ) : (
+                <select
+                  className="flex-1 px-1 py-1 text-[10px]"
+                  value={line.received_from_branch_id ?? ""}
+                  onChange={(e) =>
+                    onChange(line.id, {
+                      received_from_branch_id: e.target.value || null,
+                    })
+                  }
+                >
+                  <option value="">Branch</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.code}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="flex border border-slate-200">
               <input
@@ -681,23 +744,30 @@ function PastriesRecord({
                   })
                 }
               />
-              <select
-                className="flex-1 px-1 py-1 text-[10px]"
-                disabled={locked}
-                value={line.transfer_to_branch_id ?? ""}
-                onChange={(e) =>
-                  onChange(line.id, {
-                    transfer_to_branch_id: e.target.value || null,
-                  })
-                }
-              >
-                <option value="">Branch</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code}
-                  </option>
-                ))}
-              </select>
+              {locked ? (
+                <div className="flex-1 px-1 py-1 text-[10px] text-slate-700">
+                  {line.transfer_to_branch_id 
+                    ? (line.transfer_to_branch_name || branches.find(b => b.id === line.transfer_to_branch_id)?.name || "Unknown")
+                    : "—"}
+                </div>
+              ) : (
+                <select
+                  className="flex-1 px-1 py-1 text-[10px]"
+                  value={line.transfer_to_branch_id ?? ""}
+                  onChange={(e) =>
+                    onChange(line.id, {
+                      transfer_to_branch_id: e.target.value || null,
+                    })
+                  }
+                >
+                  <option value="">Branch</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.code}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <input
               className="border border-slate-200 px-2 py-1 text-right"
@@ -763,7 +833,7 @@ function YoghurtRecord({
 }) {
   const sectionATotals = (
     <div className="mt-4 grid grid-cols-4 gap-3 text-sm">
-      <ReadOnlyField label="Section A Volume Sold" value={totals.volume} />
+      <ReadOnlyField label="Section A Volume" value={totals.volume} />
       <ReadOnlyField label="Section A Income" value={totals.income} />
       <div />
       <div />
@@ -821,25 +891,18 @@ function YoghurtRecord({
           <p className="mb-2 text-xs font-semibold uppercase text-slate-600">
             Non-Container Sales
           </p>
-          <div className="grid grid-cols-5 text-xs font-semibold uppercase text-slate-600">
-            <div className="border border-slate-200 bg-slate-50 p-2">Item</div>
-            <div className="border border-slate-200 bg-slate-50 p-2">
-              Volume Sold
-            </div>
-            <div className="border border-slate-200 bg-slate-50 p-2">
-              Unit Price
-            </div>
-            <div className="border border-slate-200 bg-slate-50 p-2">Income</div>
-            <div className="border border-slate-200 bg-slate-50 p-2">
-              Action
-            </div>
+          <div className="grid grid-cols-4 text-[11px] font-semibold uppercase text-slate-600">
+            <div className="border border-slate-200 bg-slate-50 px-2 py-1">Item</div>
+            <div className="border border-slate-200 bg-slate-50 px-2 py-1">Volume Sold</div>
+            <div className="border border-slate-200 bg-slate-50 px-2 py-1">Unit Price</div>
+            <div className="border border-slate-200 bg-slate-50 px-2 py-1">Income</div>
           </div>
-          <div className="grid grid-cols-5 text-xs">
-            <div className="border border-slate-200 p-2 font-medium text-slate-800">
+          <div className="grid grid-cols-4 text-[11px]">
+            <div className="border border-slate-200 px-2 py-1 font-medium text-slate-800">
               {nonContainer.item_name}
             </div>
             <input
-              className="border border-slate-200 p-2 text-right"
+              className="border border-slate-200 px-2 py-1 text-right"
               type="number"
               disabled={locked}
               value={nonContainer.volume_sold ?? 0}
@@ -849,14 +912,11 @@ function YoghurtRecord({
                 })
               }
             />
-            <div className="border border-slate-200 p-2 text-right font-semibold text-slate-700">
+            <div className="border border-slate-200 px-2 py-1 text-right font-semibold text-slate-700">
               {nonContainer.unit_price?.toFixed(2)}
             </div>
-            <div className="border border-slate-200 p-2 text-right font-semibold text-slate-800">
+            <div className="border border-slate-200 px-2 py-1 text-right font-semibold text-slate-800">
               {nonContainer.income?.toFixed(2)}
-            </div>
-            <div className="border border-slate-200 p-2 text-center text-[11px] text-slate-500">
-              Income derives from backend (volume_sold × snapped price).
             </div>
           </div>
         </div>
@@ -872,20 +932,19 @@ function YoghurtRecord({
         <p className="mb-2 text-xs font-semibold uppercase text-slate-600">
           Section B – Other Income
         </p>
-        <div className="grid grid-cols-5 text-xs font-semibold uppercase text-slate-600">
-          <div className="border border-slate-200 bg-slate-50 p-2">Source</div>
-          <div className="border border-slate-200 bg-slate-50 p-2">Quantity</div>
-          <div className="border border-slate-200 bg-slate-50 p-2">Unit Price</div>
-          <div className="border border-slate-200 bg-slate-50 p-2">Income</div>
-          <div className="border border-slate-200 bg-slate-50 p-2">Note</div>
+        <div className="grid grid-cols-4 text-[11px] font-semibold uppercase text-slate-600">
+          <div className="border border-slate-200 bg-slate-50 px-2 py-1">Source</div>
+          <div className="border border-slate-200 bg-slate-50 px-2 py-1">Quantity</div>
+          <div className="border border-slate-200 bg-slate-50 px-2 py-1">Unit Price</div>
+          <div className="border border-slate-200 bg-slate-50 px-2 py-1">Income</div>
         </div>
         {sectionB.map((row) => (
-          <div className="grid grid-cols-5 text-xs" key={row.id}>
-            <div className="border border-slate-200 p-2 font-medium text-slate-800 capitalize">
+          <div className="grid grid-cols-4 text-[11px]" key={row.id}>
+            <div className="border border-slate-200 px-2 py-1 font-medium text-slate-800 capitalize">
               {row.source}
             </div>
             <input
-              className="border border-slate-200 p-2 text-right"
+              className="border border-slate-200 px-2 py-1 text-right"
               type="number"
               disabled={locked || row.source === "pastries"}
               value={row.qty_sold ?? 0}
@@ -895,29 +954,24 @@ function YoghurtRecord({
                 })
               }
             />
-            <div className="border border-slate-200 p-2 text-right font-semibold text-slate-700">
+            <div className="border border-slate-200 px-2 py-1 text-right font-semibold text-slate-700">
               {row.unit_price ? row.unit_price.toFixed(2) : "—"}
             </div>
-            <div className="border border-slate-200 p-2 text-right font-semibold text-slate-800">
+            <div className="border border-slate-200 px-2 py-1 text-right font-semibold text-slate-800">
               {row.income?.toFixed(2)}
-            </div>
-            <div className="border border-slate-200 p-2 text-[11px] text-slate-500">
-              {row.source === "pastries"
-                ? "Pastries income auto-carried"
-                : "Backend snaps price + computes income"}
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="mt-6 grid grid-cols-4 gap-3 text-sm">
-        <ReadOnlyField
-          label="Section B Total (incl. pastries)"
-          value={totals.sectionB}
-        />
-        <ReadOnlyField label="Grand Total" value={totals.grand} />
-        <div />
-        <div />
+        <div className="grid grid-cols-4 text-[11px] font-bold bg-slate-100">
+          <div className="border border-slate-200 px-2 py-1 text-slate-800">
+            Section B Total
+          </div>
+          <div className="border border-slate-200 px-2 py-1"></div>
+          <div className="border border-slate-200 px-2 py-1"></div>
+          <div className="border border-slate-200 px-2 py-1 text-right text-slate-800">
+            {totals.sectionB.toFixed(2)}
+          </div>
+        </div>
       </div>
       <p className="mt-2 text-[11px] text-slate-500">
         All totals are supplied by Supabase after triggers recompute them.
@@ -939,6 +993,9 @@ function YoghurtLines({
   locked: boolean;
   onUpdate: (table: string, id: string, patch: Record<string, unknown>) => void;
 }) {
+  const subtotalVolume = lines.reduce((sum, line) => sum + (line.volume_sold || 0), 0);
+  const subtotalIncome = lines.reduce((sum, line) => sum + (line.income || 0), 0);
+
   return (
     <div className="mt-6">
       <p className="mb-2 text-xs font-semibold uppercase text-slate-600">
@@ -976,6 +1033,19 @@ function YoghurtLines({
           </div>
         </div>
       ))}
+      <div className="grid grid-cols-5 text-[11px] font-bold bg-slate-100">
+        <div className="border border-slate-200 px-2 py-1 text-slate-800">
+          Subtotal
+        </div>
+        <div className="border border-slate-200 px-2 py-1"></div>
+        <div className="border border-slate-200 px-2 py-1 text-right text-slate-800">
+          {subtotalVolume.toFixed(2)}
+        </div>
+        <div className="border border-slate-200 px-2 py-1"></div>
+        <div className="border border-slate-200 px-2 py-1 text-right text-slate-800">
+          {subtotalIncome.toFixed(2)}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1018,10 +1088,10 @@ function MaterialsRecord({
       <div className="grid grid-cols-8 text-[11px] font-semibold uppercase text-slate-600">
         <div className="border border-slate-200 bg-slate-50 px-2 py-1">Item</div>
         <div className="border border-slate-200 bg-slate-50 px-2 py-1">Opening</div>
-        <div className="border border-slate-200 bg-slate-50 px-2 py-1">Received</div>
+        <div className="border border-slate-200 bg-slate-50 px-2 py-1">Rec. Frm</div>
+        <div className="border border-slate-200 bg-slate-50 px-2 py-1">Trans. To</div>
         <div className="border border-slate-200 bg-slate-50 px-2 py-1">Used (Norm)</div>
         <div className="border border-slate-200 bg-slate-50 px-2 py-1">Used (Spoilt)</div>
-        <div className="border border-slate-200 bg-slate-50 px-2 py-1">Transfer</div>
         <div className="border border-slate-200 bg-slate-50 px-2 py-1">Total Used</div>
         <div className="border border-slate-200 bg-slate-50 px-2 py-1">Closing</div>
       </div>
@@ -1039,15 +1109,78 @@ function MaterialsRecord({
               onChange(line.id, { opening: Number(e.target.value) })
             }
           />
-          <input
-            className="border border-slate-200 px-2 py-1 text-right"
-            type="number"
-            disabled={locked}
-            value={line.received ?? 0}
-            onChange={(e) =>
-              onChange(line.id, { received: Number(e.target.value) })
-            }
-          />
+          <div className="flex border border-slate-200">
+            <input
+              className="w-12 px-1 py-1 text-right"
+              type="number"
+              placeholder="Qty"
+              disabled={locked}
+              value={line.received ?? 0}
+              onChange={(e) =>
+                onChange(line.id, { received: Number(e.target.value) })
+              }
+            />
+            {locked ? (
+              <div className="flex-1 px-1 py-1 text-[10px] text-slate-700">
+                {line.received_from_branch_id 
+                  ? (line.received_from_branch_name || branches.find(b => b.id === line.received_from_branch_id)?.name || "Unknown")
+                  : "—"}
+              </div>
+            ) : (
+              <select
+                className="flex-1 px-1 py-1 text-[10px]"
+                value={line.received_from_branch_id ?? ""}
+                onChange={(e) =>
+                  onChange(line.id, {
+                    received_from_branch_id: e.target.value || null,
+                  })
+                }
+              >
+                <option value="">Branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.code}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="flex border border-slate-200">
+            <input
+              className="w-12 px-1 py-1 text-right"
+              type="number"
+              placeholder="Qty"
+              disabled={locked}
+              value={line.transferred_out ?? 0}
+              onChange={(e) =>
+                onChange(line.id, { transferred_out: Number(e.target.value) })
+              }
+            />
+            {locked ? (
+              <div className="flex-1 px-1 py-1 text-[10px] text-slate-700">
+                {line.transfer_to_branch_id 
+                  ? (line.transfer_to_branch_name || branches.find(b => b.id === line.transfer_to_branch_id)?.name || "Unknown")
+                  : "—"}
+              </div>
+            ) : (
+              <select
+                className="flex-1 px-1 py-1 text-[10px]"
+                value={line.transfer_to_branch_id ?? ""}
+                onChange={(e) =>
+                  onChange(line.id, {
+                    transfer_to_branch_id: e.target.value || null,
+                  })
+                }
+              >
+                <option value="">Branch</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.code}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
           <input
             className="border border-slate-200 px-2 py-1 text-right"
             type="number"
@@ -1066,35 +1199,6 @@ function MaterialsRecord({
               onChange(line.id, { used_spoilt: Number(e.target.value) })
             }
           />
-          <div className="flex border border-slate-200">
-            <input
-              className="w-12 px-1 py-1 text-right"
-              type="number"
-              placeholder="Qty"
-              disabled={locked}
-              value={line.transferred_out ?? 0}
-              onChange={(e) =>
-                onChange(line.id, { transferred_out: Number(e.target.value) })
-              }
-            />
-            <select
-              className="flex-1 px-1 py-1 text-[10px]"
-              disabled={locked}
-              value={line.transfer_to_branch_id ?? ""}
-              onChange={(e) =>
-                onChange(line.id, {
-                  transfer_to_branch_id: e.target.value || null,
-                })
-              }
-            >
-              <option value="">Branch</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.code}
-                </option>
-              ))}
-            </select>
-          </div>
           <div className="border border-slate-200 px-2 py-1 text-right">
             {line.total_used}
           </div>
@@ -1112,13 +1216,13 @@ function MaterialsRecord({
           {totals.received}
         </div>
         <div className="border border-slate-200 px-2 py-1 text-right">
+          {totals.transferred_out}
+        </div>
+        <div className="border border-slate-200 px-2 py-1 text-right">
           {totals.used_normal}
         </div>
         <div className="border border-slate-200 px-2 py-1 text-right">
           {totals.used_spoilt}
-        </div>
-        <div className="border border-slate-200 px-2 py-1 text-right">
-          {totals.transferred_out}
         </div>
         <div className="border border-slate-200 px-2 py-1 text-right">
           {totals.total_used}
@@ -1318,20 +1422,18 @@ function CashSummary({
   cashOnHand,
   momo,
   grandTotal,
-  cashDelta,
   locked,
   onChange,
 }: {
   cashOnHand: number;
   momo: number;
   grandTotal: number;
-  cashDelta: number;
   locked: boolean;
   onChange: (patch: Record<string, unknown>) => void;
 }) {
   return (
     <SectionFrame title="Cash Breakdown">
-      <div className="grid grid-cols-5 gap-3 text-sm">
+      <div className="grid grid-cols-3 gap-3 text-sm">
         <Field
           label="Cash on Hand"
           value={cashOnHand}
@@ -1345,12 +1447,7 @@ function CashSummary({
           onChange={(value) => onChange({ momo_amount: value })}
         />
         <ReadOnlyField label="Grand Total (A+B)" value={grandTotal} />
-        <ReadOnlyField label="Balance Delta" value={cashDelta} />
       </div>
-      <p className="mt-2 text-[11px] text-slate-500">
-        Warning: ideally Cash on Hand + MoMo ≈ Grand Total. Delta is computed in
-        the backend as (cash_on_hand + momo_amount) - grand_total.
-      </p>
     </SectionFrame>
   );
 }

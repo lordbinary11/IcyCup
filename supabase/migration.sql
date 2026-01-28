@@ -188,7 +188,10 @@ FOR INSERT WITH CHECK (
 
 CREATE POLICY "sheets_update" ON daily_sheets
 FOR UPDATE USING (
-  (branch_id = (SELECT branch_id FROM current_profile WHERE role = 'branch_user') AND NOT locked)
+  (branch_id = (SELECT branch_id FROM current_profile))
+  OR EXISTS (SELECT 1 FROM current_profile WHERE role = 'supervisor')
+) WITH CHECK (
+  (branch_id = (SELECT branch_id FROM current_profile))
   OR EXISTS (SELECT 1 FROM current_profile WHERE role = 'supervisor')
 );
 

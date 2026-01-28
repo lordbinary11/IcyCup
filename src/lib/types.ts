@@ -56,6 +56,8 @@ export type MaterialLine = {
   item_name: string;
   opening: number;
   received: number;
+  received_from_branch_name: string | null;
+  received_from_branch_id?: string | null;
   used_normal: number;
   used_spoilt: number;
   transferred_out: number;
@@ -101,6 +103,9 @@ export type SheetHeader = {
   momo_amount: number;
   cash_balance_delta: number;
   currency_total_cash?: number;
+  submitted_by_name?: string | null;
+  submitted_by_role?: string | null;
+  submitted_at?: string | null;
 };
 
 export type SheetPayload = {

@@ -25,6 +25,9 @@ export async function fetchSheet(
   client: Client,
   sheetId: string
 ): Promise<SheetPayload> {
+  // Refresh sheet items to add any new items and populate prices
+  await client.rpc("refresh_sheet_items", { p_sheet_id: sheetId });
+
   // Fetch sheet header with branch name
   const { data: sheetData, error: sheetError } = await client
     .from("daily_sheets")
@@ -51,16 +54,16 @@ export async function fetchSheet(
   ] = await Promise.all([
     client
       .from("pastry_lines")
-      .select("*, received_from_branch:branches!pastry_lines_received_from_branch_id_fkey(name), transfer_to_branch:branches!pastry_lines_transfer_to_branch_id_fkey(name)")
+      .select("*, items(name), received_from_branch:branches!pastry_lines_received_from_branch_id_fkey(name), transfer_to_branch:branches!pastry_lines_transfer_to_branch_id_fkey(name)")
       .eq("sheet_id", sheetId),
     client.from("yoghurt_headers").select("*").eq("sheet_id", sheetId).single(),
-    client.from("yoghurt_container_lines").select("*").eq("sheet_id", sheetId),
-    client.from("yoghurt_refill_lines").select("*").eq("sheet_id", sheetId),
-    client.from("yoghurt_non_container").select("*").eq("sheet_id", sheetId).maybeSingle(),
+    client.from("yoghurt_container_lines").select("*, items(name)").eq("sheet_id", sheetId),
+    client.from("yoghurt_refill_lines").select("*, items(name)").eq("sheet_id", sheetId),
+    client.from("yoghurt_non_container").select("*, items(name)").eq("sheet_id", sheetId).maybeSingle(),
     client.from("yoghurt_section_b_income").select("*").eq("sheet_id", sheetId),
     client
       .from("material_lines")
-      .select("*, transfer_to_branch:branches!material_lines_transfer_to_branch_id_fkey(name)")
+      .select("*, items(name), received_from_branch:branches!material_lines_received_from_branch_id_fkey(name), transfer_to_branch:branches!material_lines_transfer_to_branch_id_fkey(name)")
       .eq("sheet_id", sheetId),
     client.from("currency_notes").select("*").eq("sheet_id", sheetId),
     client.from("staff_attendance").select("*").eq("sheet_id", sheetId),
@@ -85,11 +88,14 @@ export async function fetchSheet(
     momo_amount: sd.momo_amount || 0,
     cash_balance_delta: sd.cash_balance_delta || 0,
     currency_total_cash: sd.currency_total_cash || 0,
+    submitted_by_name: sd.submitted_by_name || null,
+    submitted_by_role: sd.submitted_by_role || null,
+    submitted_at: sd.submitted_at || null,
   };
 
   const pastries: PastryLine[] = (pastriesRes.data || []).map((p: Record<string, unknown>) => ({
     id: p.id as string,
-    item_name: p.item_name as string,
+    item_name: (p.items as { name?: string } | null)?.name || "",
     qty_received: Number(p.qty_received) || 0,
     received_from_other_qty: Number(p.received_from_other_qty) || 0,
     received_from_branch_id: p.received_from_branch_id as string | null,
@@ -116,7 +122,7 @@ export async function fetchSheet(
   const yoghurtContainers: YoghurtContainerLine[] = (yoghurtContainersRes.data || []).map(
     (c: Record<string, unknown>) => ({
       id: c.id as string,
-      item_name: c.item_name as string,
+      item_name: (c.items as { name?: string } | null)?.name || "",
       volume_factor: Number(c.volume_factor) || 1,
       qty_sold: Number(c.qty_sold) || 0,
       volume_sold: Number(c.volume_sold) || 0,
@@ -125,10 +131,16 @@ export async function fetchSheet(
     })
   );
 
+  // Debug: Log refill response
+  if (yoghurtRefillsRes.error) {
+    console.error("Yoghurt refills error:", yoghurtRefillsRes.error);
+  }
+  console.log("Yoghurt refills raw data:", yoghurtRefillsRes.data);
+
   const yoghurtRefills: YoghurtRefillLine[] = (yoghurtRefillsRes.data || []).map(
     (r: Record<string, unknown>) => ({
       id: r.id as string,
-      item_name: r.item_name as string,
+      item_name: (r.items as { name?: string } | null)?.name || "",
       volume_factor: Number(r.volume_factor) || 1,
       qty_sold: Number(r.qty_sold) || 0,
       volume_sold: Number(r.volume_sold) || 0,
@@ -136,11 +148,13 @@ export async function fetchSheet(
       income: Number(r.income) || 0,
     })
   );
+  
+  console.log("Yoghurt refills mapped:", yoghurtRefills);
 
   const yoghurtNonContainer: YoghurtNonContainer | null = yoghurtNonContainerRes.data
     ? {
         id: yoghurtNonContainerRes.data.id,
-        item_name: yoghurtNonContainerRes.data.item_name,
+        item_name: (yoghurtNonContainerRes.data.items as { name?: string } | null)?.name || "",
         unit_price: Number(yoghurtNonContainerRes.data.unit_price) || 0,
         volume_sold: Number(yoghurtNonContainerRes.data.volume_sold) || 0,
         income: Number(yoghurtNonContainerRes.data.income) || 0,
@@ -159,9 +173,11 @@ export async function fetchSheet(
 
   const materials: MaterialLine[] = (materialsRes.data || []).map((m: Record<string, unknown>) => ({
     id: m.id as string,
-    item_name: m.item_name as string,
+    item_name: (m.items as { name?: string } | null)?.name || "",
     opening: Number(m.opening) || 0,
     received: Number(m.received) || 0,
+    received_from_branch_id: m.received_from_branch_id as string | null,
+    received_from_branch_name: (m.received_from_branch as { name?: string } | null)?.name || null,
     used_normal: Number(m.used_normal) || 0,
     used_spoilt: Number(m.used_spoilt) || 0,
     transferred_out: Number(m.transferred_out) || 0,
@@ -281,7 +297,8 @@ export async function submitSheet(
         total_stock: payload.yoghurtHeader.total_stock,
         closing_stock: payload.yoghurtHeader.closing_stock,
       })
-      .eq("sheet_id", sheetId);
+      .eq("sheet_id", sheetId)
+      .single();
     if (error) throw new Error(`Yoghurt header update failed: ${error.message}`);
   }
 
@@ -347,6 +364,7 @@ export async function submitSheet(
       .update({
         opening: line.opening,
         received: line.received,
+        received_from_branch_id: line.received_from_branch_id || null,
         used_normal: line.used_normal,
         used_spoilt: line.used_spoilt,
         transferred_out: line.transferred_out,
@@ -371,7 +389,7 @@ export async function submitSheet(
     if (error) throw new Error(`Currency note update failed: ${error.message}`);
   }
 
-  // Update sheet header with all totals
+  // Update sheet header with all totals (keep unlocked for editing)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: headerError } = await (client as any)
     .from("daily_sheets")
@@ -385,7 +403,6 @@ export async function submitSheet(
       cash_on_hand: payload.header.cash_on_hand,
       momo_amount: payload.header.momo_amount,
       cash_balance_delta: payload.header.cash_balance_delta,
-      locked: true,
     })
     .eq("id", sheetId);
 

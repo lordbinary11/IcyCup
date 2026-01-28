@@ -1,6 +1,8 @@
+/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
 
 :root {
   --background: #ffffff;
@@ -20,8 +22,61 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* PDF rendering styles - only active during PDF capture */
+.pdf-rendering .grid > div.border {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.pdf-rendering input,
+.pdf-rendering select {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  input, select, textarea {
+    border: 1px solid #000 !important;
+    background: white !important;
+    padding: 4px 8px !important;
+    line-height: normal !important;
+    height: auto !important;
+    min-height: 24px !important;
+  }
+  
+  .grid > div {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 24px !important;
+  }
+  
+  button {
+    display: none !important;
+  }
+  
+  .grid {
+    page-break-inside: avoid;
+  }
+  
+  section {
+    page-break-inside: avoid;
   }
 }

@@ -6,8 +6,10 @@ import { createBrowserSupabaseClient } from "@/lib/supabaseBrowser";
 
 export function OpenTodaySheetButton({
   branchId,
+  branchName,
 }: {
   branchId: string | null;
+  branchName?: string;
 }) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
@@ -15,9 +17,12 @@ export function OpenTodaySheetButton({
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col items-start gap-2">
+    <div className="flex flex-col items-start gap-2 border-2 border-slate-900 rounded-lg p-4 hover:bg-slate-50 transition-colors">
+      {branchName && (
+        <h3 className="text-lg font-semibold text-slate-900 mb-2">{branchName}</h3>
+      )}
       <button
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
+        className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50 hover:bg-slate-800 transition-colors"
         disabled={loading || !branchId}
         onClick={async () => {
           if (!branchId) return;
@@ -29,13 +34,13 @@ export function OpenTodaySheetButton({
           );
           setLoading(false);
           if (rpcError || !data) {
-            setError(rpcError?.message ?? "Could not create/open today’s sheet");
+            setError(rpcError?.message ?? "Could not create/open today's sheet");
             return;
           }
           router.push(`/sheets/${data}`);
         }}
       >
-        {loading ? "Opening..." : "Create / Open today’s sheet"}
+        {loading ? "Opening..." : "Open Today's Sheet"}
       </button>
       {error && (
         <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">

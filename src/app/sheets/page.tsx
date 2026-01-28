@@ -31,7 +31,7 @@ export default async function SheetsList({
     redirect("/login");
   }
 
-  // Determine role for behavior (supervisor sees all branches, submitted only).
+  // Determine role for behavior (supervisor sees all branches and all sheets)
   const { data: profile } = await supabase
     .from("user_profiles")
     .select("*")
@@ -47,7 +47,6 @@ export default async function SheetsList({
     .select(
       "id, sheet_date, locked, grand_total, branch_id, branches(name, code)"
     )
-    .eq("locked", true)
     .order("sheet_date", { ascending: false })
     .limit(50);
 
@@ -83,7 +82,7 @@ export default async function SheetsList({
           <div>
             <h1 className="text-2xl font-semibold">Sheets</h1>
             <p className="text-sm text-slate-600">
-              Showing submitted sheets only.
+              Showing all sheets (submitted and drafts).
             </p>
           </div>
           <Link
@@ -96,8 +95,7 @@ export default async function SheetsList({
 
         {profile?.role === "supervisor" && (
           <p className="text-xs text-slate-500">
-            Supervisor view: all branches (filtered by RLS + optional query
-            filters). Draft sheets are hidden until submitted.
+            Supervisor view: all branches and all sheets. You can only edit sheets from the next day onwards (12:00 AM+).
           </p>
         )}
 
@@ -123,15 +121,24 @@ export default async function SheetsList({
                       {branch?.code ? ` (${branch.code})` : ""}
                     </td>
                     <td className="px-4 py-2">
-                      {sheet.locked ? (
-                        <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
-                          Locked
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
-                          Editable
-                        </span>
-                      )}
+                      {(() => {
+                        const sheetDate = new Date(sheet.sheet_date).toISOString().split('T')[0];
+                        const today = new Date().toISOString().split('T')[0];
+                        const isPastDay = sheetDate < today;
+                        
+                        if (isPastDay) {
+                          return (
+                            <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-800">
+                              Submitted
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                            Draft
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-2 text-right">
                       {Number(sheet.grand_total ?? 0).toFixed(2)}

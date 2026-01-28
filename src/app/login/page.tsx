@@ -27,62 +27,60 @@ export default function LoginPage() {
     router.replace("/");
   };
 
-  const handleSignup = async () => {
-    setLoading(true);
-    setError(null);
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    setLoading(false);
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
-    }
-    router.replace("/");
-  };
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto flex max-w-md flex-col gap-4 px-6 py-12">
-        <h1 className="text-2xl font-semibold">Sign in</h1>
-        <p className="text-sm text-slate-600">
-          Branch users will be redirected to today’s sheet. Supervisors go to the
-          sheets list.
-        </p>
-        <input
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && (
-          <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-            {error}
+    <main className="min-h-screen bg-white flex items-center justify-center">
+      <div className="w-full max-w-md px-6">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">IcyCup</h1>
+          <p className="text-sm text-slate-600">
+            Daily Sales Analysis System
           </p>
-        )}
-        <button
-          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50"
-          onClick={handleLogin}
-          disabled={!email || !password || loading}
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-        <button
-          className="w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm disabled:opacity-50"
-          onClick={handleSignup}
-          disabled={!email || !password || loading}
-        >
-          {loading ? "Working..." : "Sign up"}
-        </button>
+        </div>
+        <div className="bg-white border-2 border-slate-900 rounded-lg p-8 shadow-lg">
+          <h2 className="text-xl font-semibold text-slate-900 mb-6">Sign In</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Email Address
+              </label>
+              <input
+                className="w-full rounded-md border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none transition-colors"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-2">
+                Password
+              </label>
+              <input
+                className="w-full rounded-md border-2 border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none transition-colors"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {error && (
+              <div className="rounded-md border-2 border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {error}
+              </div>
+            )}
+            <button
+              className="w-full rounded-md bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              onClick={handleLogin}
+              disabled={!email || !password || loading}
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+          </div>
+        </div>
+        <p className="text-center text-xs text-slate-500 mt-6">
+          Contact your supervisor for account access
+        </p>
       </div>
     </main>
   );

@@ -26,6 +26,9 @@ insert into items (code, name, category) values
   ('YOG_REFILL_2_2L_GALLON','2.2L Gallon Refill','yoghurt_refill'),
   ('YOG_REFILL_4_6L_GALLON','4.6L Gallon Refill','yoghurt_refill'),
 
+  -- yoghurt non-container
+  ('YOG_NON_CONTAINER',    'Yoghurt (Non-Container)','yoghurt_non_container'),
+
   -- section B
   ('YOG_SMOOTHIE',         'Smoothies',       'smoothie'),
   ('YOG_WATER',            'Water',           'water');
@@ -69,6 +72,9 @@ select i.id,
          when i.code = 'YOG_REFILL_1_2L_GALLON' then 30
          when i.code = 'YOG_REFILL_2_2L_GALLON' then 55
          when i.code = 'YOG_REFILL_4_6L_GALLON' then 100
+
+         -- non-container
+         when i.code = 'YOG_NON_CONTAINER'     then 25
 
          -- section B
          when i.code = 'YOG_SMOOTHIE'          then 30
