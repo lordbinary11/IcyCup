@@ -12,20 +12,36 @@ export default async function Home() {
 
   if (!session) {
     return (
-      <main className="min-h-screen bg-slate-50 text-slate-900">
-        <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-12">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Daily Sales Analysis (Digital Sheet)
-          </h1>
-          <p className="text-sm text-slate-600">
-            Please sign in to access your branch sheet or supervisor view.
-          </p>
-          <Link
-            className="inline-flex w-fit rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm"
-            href="/login"
-          >
-            Go to login
-          </Link>
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="mb-8 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-900 mb-4">
+              <span className="text-2xl font-bold text-white">IC</span>
+            </div>
+            <h1 className="text-4xl font-bold text-slate-900 mb-2">IcyCup</h1>
+            <p className="text-base text-slate-600">
+              Daily Sales Analysis System
+            </p>
+          </div>
+          <div className="bg-white border-2 border-slate-900 rounded-xl p-8 shadow-2xl">
+            <h2 className="text-2xl font-bold text-slate-900 mb-2 text-center">
+              Welcome Back
+            </h2>
+            <p className="text-sm text-slate-600 mb-8 text-center">
+              Sign in to access your branch sheets and track daily sales performance
+            </p>
+            <Link
+              className="flex w-full items-center justify-center rounded-lg bg-slate-900 px-6 py-3.5 text-base font-semibold text-white shadow-lg hover:bg-slate-800 hover:shadow-xl transition-all duration-200"
+              href="/login"
+            >
+              Sign In to Your Account
+            </Link>
+            <div className="mt-6 pt-6 border-t border-slate-200">
+              <p className="text-xs text-slate-500 text-center">
+                Secure access for branch users, supervisors, and administrators
+              </p>
+            </div>
+          </div>
         </div>
       </main>
     );
