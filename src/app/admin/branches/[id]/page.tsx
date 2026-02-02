@@ -61,7 +61,8 @@ export default function EditBranchPage() {
     }
 
     loadData();
-  }, [branchId, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

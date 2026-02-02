@@ -394,7 +394,7 @@ export default function SheetPage() {
   // Check if user can edit based on role and time-based rules
   // Wait for user role to load before determining editability
   const editPermission = userRole 
-    ? canEditSheet(userRole, data.header.sheet_date, data.header.locked)
+    ? canEditSheet(userRole, data.header.sheet_date)
     : null;
   
   const isEditable = editPermission?.canEdit ?? false;

@@ -42,8 +42,7 @@ export function canSupervisorEdit(sheetDate: string): boolean {
  */
 export function canEditSheet(
   userRole: UserRole,
-  sheetDate: string,
-  _isLocked: boolean
+  sheetDate: string
 ): { canEdit: boolean; reason?: string } {
   // Admin can always edit
   if (userRole === 'admin') {
