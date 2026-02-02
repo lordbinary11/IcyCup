@@ -32,11 +32,25 @@ export function OpenTodaySheetButton({
             "get_or_create_today_sheet",
             { p_branch_id: branchId }
           );
-          setLoading(false);
+          
           if (rpcError || !data) {
+            setLoading(false);
             setError(rpcError?.message ?? "Could not create/open today's sheet");
             return;
           }
+
+          // Ensure yoghurt header exists before navigating
+          await supabase
+            .from("yoghurt_headers")
+            .upsert({
+              sheet_id: data,
+              opening_stock: 0,
+              stock_received: 0,
+              total_stock: 0,
+              closing_stock: 0,
+            }, { onConflict: 'sheet_id' });
+
+          setLoading(false);
           router.push(`/sheets/${data}`);
         }}
       >

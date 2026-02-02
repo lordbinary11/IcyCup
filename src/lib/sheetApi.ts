@@ -56,7 +56,7 @@ export async function fetchSheet(
       .from("pastry_lines")
       .select("*, items(name), received_from_branch:branches!pastry_lines_received_from_branch_id_fkey(name), transfer_to_branch:branches!pastry_lines_transfer_to_branch_id_fkey(name)")
       .eq("sheet_id", sheetId),
-    client.from("yoghurt_headers").select("*").eq("sheet_id", sheetId).single(),
+    client.from("yoghurt_headers").select("*").eq("sheet_id", sheetId).maybeSingle(),
     client.from("yoghurt_container_lines").select("*, items(name)").eq("sheet_id", sheetId),
     client.from("yoghurt_refill_lines").select("*, items(name)").eq("sheet_id", sheetId),
     client.from("yoghurt_non_container").select("*, items(name)").eq("sheet_id", sheetId).maybeSingle(),
@@ -109,7 +109,8 @@ export async function fetchSheet(
     amount: Number(p.amount) || 0,
   }));
 
-  const yoghurtHeader: YoghurtHeader | null = yoghurtHeaderRes.data
+  // If yoghurt header doesn't exist, create it
+  let yoghurtHeader: YoghurtHeader | null = yoghurtHeaderRes.data
     ? {
         sheet_id: yoghurtHeaderRes.data.sheet_id,
         opening_stock: Number(yoghurtHeaderRes.data.opening_stock) || 0,
@@ -118,6 +119,31 @@ export async function fetchSheet(
         closing_stock: Number(yoghurtHeaderRes.data.closing_stock) || 0,
       }
     : null;
+
+  // Auto-create yoghurt header if missing
+  if (!yoghurtHeader) {
+    const { data: newHeader } = await client
+      .from("yoghurt_headers")
+      .insert({
+        sheet_id: sheetId,
+        opening_stock: 0,
+        stock_received: 0,
+        total_stock: 0,
+        closing_stock: 0,
+      })
+      .select()
+      .single();
+
+    if (newHeader) {
+      yoghurtHeader = {
+        sheet_id: newHeader.sheet_id,
+        opening_stock: 0,
+        stock_received: 0,
+        total_stock: 0,
+        closing_stock: 0,
+      };
+    }
+  }
 
   const yoghurtContainers: YoghurtContainerLine[] = (yoghurtContainersRes.data || []).map(
     (c: Record<string, unknown>) => ({
