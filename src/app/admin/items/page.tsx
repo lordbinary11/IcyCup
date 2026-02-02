@@ -6,14 +6,12 @@ import { createBrowserSupabaseClient } from "@/lib/supabaseBrowser";
 import {
   getAllItems,
   createItem,
-  updateItem,
   deleteItem,
   archiveItem,
   activateItem,
   addItemVersion,
   deleteItemVersion,
   type ItemWithVersions,
-  type ItemVersion,
 } from "@/lib/itemsApi";
 
 const CATEGORIES = [
@@ -53,6 +51,7 @@ export default function ItemsManagementPage() {
   useEffect(() => {
     checkAuth();
     loadItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function checkAuth() {

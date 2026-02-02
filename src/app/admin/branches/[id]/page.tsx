@@ -19,19 +19,23 @@ export default function EditBranchPage() {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [supervisorId, setSupervisorId] = useState<string>("");
-  const [supervisors, setSupervisors] = useState<Array<{ user_id: string; first_name: string; last_name: string }>>([]);
+  const [supervisors, setSupervisors] = useState<Array<{ user_id: string; first_name: string; last_name: string; email: string }>>([]);
 
   useEffect(() => {
     async function loadData() {
       try {
         // Fetch branch data
-        const { data: branch, error: branchError } = await supabase
+        const { data: branchData, error: branchError } = await supabase
           .from("branches")
-          .select("*")
-          .eq("id", branchId)
+          .select("*, supervisor:user_profiles(user_id, first_name, last_name)")
+          .eq("id", params.id)
           .single();
 
-        if (branchError) throw branchError;
+        if (branchError || !branchData) {
+          throw new Error("Failed to fetch branch data");
+        }
+
+        const branch = branchData as { name: string; code: string; supervisor_id: string | null; supervisor: { user_id: string; first_name: string; last_name: string } | null };
 
         setName(branch.name);
         setCode(branch.code);
@@ -40,15 +44,17 @@ export default function EditBranchPage() {
         // Fetch supervisors
         const { data: supervisorsList, error: supervisorsError } = await supabase
           .from("user_profiles")
-          .select("user_id, first_name, last_name")
+          .select("user_id, first_name, last_name, email")
           .eq("role", "supervisor")
           .order("first_name", { ascending: true });
 
-        if (supervisorsError) throw supervisorsError;
+        if (supervisorsError) {
+          throw supervisorsError;
+        }
 
         setSupervisors(supervisorsList || []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load branch');
       } finally {
         setLoading(false);
       }
@@ -79,8 +85,8 @@ export default function EditBranchPage() {
       setTimeout(() => {
         router.push("/admin");
       }, 1500);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update branch');
     } finally {
       setSaving(false);
     }

@@ -107,7 +107,7 @@ export default async function Home() {
               Today
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              Only one sheet per day. Create/open today’s sheet to enter and then
+              Only one sheet per day. Create/open today&apos;s sheet to enter and then
               submit it.
             </p>
             <div className="mt-4">
@@ -201,59 +201,59 @@ export default async function Home() {
       .from("daily_sheets")
       .select("id, sheet_date, locked, grand_total, branches(name)")
       .order("sheet_date", { ascending: false })
-      .limit(50) as { data: any[] | null; error: any };
+      .limit(50);
 
     return (
-      <main className="min-h-screen bg-white text-slate-900">
-        <div className="border-b-2 border-slate-900 bg-white">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">IcyCup</h1>
-              <p className="text-xs text-slate-600">Field Supervisor Dashboard</p>
+        <main className="min-h-screen bg-white text-slate-900">
+          <div className="border-b-2 border-slate-900 bg-white">
+            <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">IcyCup</h1>
+                <p className="text-xs text-slate-600">Field Supervisor Dashboard</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link
+                  className="rounded-md border-2 border-slate-900 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
+                  href="/sheets"
+                >
+                  All Sheets
+                </Link>
+                <Link
+                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
+                  href="/login"
+                >
+                  Sign Out
+                </Link>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Link
-                className="rounded-md border-2 border-slate-900 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 transition-colors"
-                href="/sheets"
-              >
-                All Sheets
-              </Link>
-              <Link
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition-colors"
-                href="/login"
-              >
-                Sign Out
-              </Link>
+          </div>
+          <div className="mx-auto max-w-6xl px-6 py-8">
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-slate-900">Select Branch to Record Sheet</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Choose a branch to create or view today&apos;s sheet
+              </p>
             </div>
-          </div>
-        </div>
-        <div className="mx-auto max-w-6xl px-6 py-8">
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-slate-900">Select Branch to Record Sheet</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Choose a branch to create or view today's sheet
-            </p>
-          </div>
-          <BranchSelector branches={branches || []} />
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-slate-900">Recent Sheets</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              View all submitted sheets across branches
-            </p>
-          </div>
-          <div className="overflow-hidden rounded-lg border-2 border-slate-900">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-white text-xs uppercase text-slate-600">
-                <tr>
-                  <th className="px-4 py-2 text-left">Date</th>
-                  <th className="px-4 py-2 text-left">Branch</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                  <th className="px-4 py-2 text-right">Grand Total</th>
-                  <th className="px-4 py-2 text-left">Action</th>
-                </tr>
-              </thead>
+            <BranchSelector branches={branches || []} />
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold text-slate-900">Recent Sheets</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                View all submitted sheets across branches
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-lg border-2 border-slate-900">
+              <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <thead className="bg-white text-xs uppercase text-slate-600">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Date</th>
+                    <th className="px-4 py-2 text-left">Branch</th>
+                    <th className="px-4 py-2 text-left">Status</th>
+                    <th className="px-4 py-2 text-right">Grand Total</th>
+                    <th className="px-4 py-2 text-left">Action</th>
+                  </tr>
+                </thead>
               <tbody className="divide-y divide-slate-200">
-                {(sheets ?? []).map((s) => (
+                {(sheets ?? []).map((s: { id: string; sheet_date: string; locked: boolean; grand_total: number; branches: { name: string } | null }) => (
                   <tr key={s.id}>
                     <td className="px-4 py-2">{s.sheet_date}</td>
                     <td className="px-4 py-2">{s.branches?.name || 'N/A'}</td>

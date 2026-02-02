@@ -49,8 +49,8 @@ export async function getAllItems(): Promise<ItemWithVersions[]> {
 
   return (items || []).map((item: Item) => {
     const itemVersions = (versions || [])
-      .filter((v: any) => v.item_id === item.id)
-      .map((v: any) => ({
+      .filter((v: { item_id: string }) => v.item_id === item.id)
+      .map((v: { id: string; item_id: string; volume_factor: number; unit_price: number; effective_from: string; effective_to: string | null }) => ({
         id: v.id,
         item_id: v.item_id,
         volume_factor: Number(v.volume_factor) || 1,

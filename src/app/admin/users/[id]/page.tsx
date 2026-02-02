@@ -50,8 +50,8 @@ export default function EditUserPage() {
         if (branchesError) throw branchesError;
 
         setBranches(branchesList || []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load user');
       } finally {
         setLoading(false);
       }
@@ -88,8 +88,8 @@ export default function EditUserPage() {
       setTimeout(() => {
         router.push("/admin");
       }, 1500);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update user');
     } finally {
       setSaving(false);
     }
