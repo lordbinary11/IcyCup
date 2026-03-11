@@ -314,18 +314,60 @@ export async function submitSheet(
 
   // Update yoghurt header
   if (payload.yoghurtHeader) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (client as any)
+    // Debug: Log the yoghurt header data
+    console.log("Updating yoghurt header:", payload.yoghurtHeader);
+    console.log("Sheet ID:", sheetId);
+    
+    // Validate required fields
+    const { opening_stock, stock_received, total_stock, closing_stock } = payload.yoghurtHeader;
+    
+    // Check if yoghurt header exists first
+    const { data: existingHeader, error: checkError } = await (client as any)
       .from("yoghurt_headers")
-      .update({
-        opening_stock: payload.yoghurtHeader.opening_stock,
-        stock_received: payload.yoghurtHeader.stock_received,
-        total_stock: payload.yoghurtHeader.total_stock,
-        closing_stock: payload.yoghurtHeader.closing_stock,
-      })
+      .select("sheet_id")
       .eq("sheet_id", sheetId)
       .single();
-    if (error) throw new Error(`Yoghurt header update failed: ${error.message}`);
+    
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found" error
+      console.error("Error checking yoghurt header:", checkError);
+      throw new Error(`Failed to check yoghurt header: ${checkError.message}`);
+    }
+    
+    if (!existingHeader) {
+      console.log("Yoghurt header not found, creating new one");
+      // Create the yoghurt header if it doesn't exist
+      const { error: insertError } = await (client as any)
+        .from("yoghurt_headers")
+        .insert({
+          sheet_id: sheetId,
+          opening_stock: opening_stock ?? 0,
+          stock_received: stock_received ?? 0,
+          total_stock: total_stock ?? 0,
+          closing_stock: closing_stock ?? 0,
+        });
+      
+      if (insertError) {
+        console.error("Yoghurt header insert error:", insertError);
+        throw new Error(`Yoghurt header creation failed: ${insertError.message}`);
+      }
+    } else {
+      console.log("Updating existing yoghurt header");
+      // Update existing yoghurt header
+      const { error } = await (client as any)
+        .from("yoghurt_headers")
+        .update({
+          opening_stock: opening_stock ?? 0,
+          stock_received: stock_received ?? 0,
+          total_stock: total_stock ?? 0,
+          closing_stock: closing_stock ?? 0,
+        })
+        .eq("sheet_id", sheetId);
+      
+      if (error) {
+        console.error("Yoghurt header update error:", error);
+        throw new Error(`Yoghurt header update failed: ${error.message}`);
+      }
+    }
   }
 
   // Update yoghurt container lines

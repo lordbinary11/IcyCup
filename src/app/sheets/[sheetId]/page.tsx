@@ -1504,6 +1504,7 @@ function ReadOnlyField({ label, value }: { label: string; value: number }) {
 
 function headerIdOrFail(header: YoghurtHeader | null): string {
   if (!header) throw new Error("Yoghurt header missing");
-  return (header.sheet_id ?? header.id)!;
+  if (header.sheet_id) return header.sheet_id;
+  throw new Error("Yoghurt header has no sheet_id");
 }
 
