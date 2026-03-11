@@ -537,7 +537,7 @@ export default function SheetPage() {
                 return {
                   ...prev,
                   yoghurtContainers: prev.yoghurtContainers.map((c) =>
-                    c.id === id ? { ...c, ...patch } : c
+                    c.id === id ? computeYoghurtContainerLine({ ...c, ...patch }) : c
                   ),
                 };
               }
@@ -545,7 +545,7 @@ export default function SheetPage() {
                 return {
                   ...prev,
                   yoghurtRefills: prev.yoghurtRefills.map((r) =>
-                    r.id === id ? { ...r, ...patch } : r
+                    r.id === id ? computeYoghurtRefillLine({ ...r, ...patch }) : r
                   ),
                 };
               }
@@ -688,9 +688,10 @@ function PastriesRecord({
               className="border border-slate-200 px-2 py-1 text-right"
               type="number"
               disabled={locked}
-              value={line.qty_received ?? 0}
+              placeholder="0"
+              value={line.qty_received && line.qty_received > 0 ? line.qty_received : ''}
               onChange={(e) =>
-                onChange(line.id, { qty_received: Number(e.target.value) })
+                onChange(line.id, { qty_received: e.target.value ? Number(e.target.value) : 0 })
               }
             />
             <div className="flex border border-slate-200">
@@ -699,10 +700,10 @@ function PastriesRecord({
                 type="number"
                 placeholder="Qty"
                 disabled={locked}
-                value={line.received_from_other_qty ?? 0}
+                value={line.received_from_other_qty && line.received_from_other_qty > 0 ? line.received_from_other_qty : ''}
                 onChange={(e) =>
                   onChange(line.id, {
-                    received_from_other_qty: Number(e.target.value),
+                    received_from_other_qty: e.target.value ? Number(e.target.value) : 0,
                   })
                 }
               />
@@ -737,10 +738,10 @@ function PastriesRecord({
                 type="number"
                 placeholder="Qty"
                 disabled={locked}
-                value={line.transfer_to_other_qty ?? 0}
+                value={line.transfer_to_other_qty && line.transfer_to_other_qty > 0 ? line.transfer_to_other_qty : ''}
                 onChange={(e) =>
                   onChange(line.id, {
-                    transfer_to_other_qty: Number(e.target.value),
+                    transfer_to_other_qty: e.target.value ? Number(e.target.value) : 0,
                   })
                 }
               />
@@ -773,9 +774,10 @@ function PastriesRecord({
               className="border border-slate-200 px-2 py-1 text-right"
               type="number"
               disabled={locked}
-              value={line.qty_sold ?? 0}
+              placeholder="0"
+              value={line.qty_sold && line.qty_sold > 0 ? line.qty_sold : ''}
               onChange={(e) =>
-                onChange(line.id, { qty_sold: Number(e.target.value) })
+                onChange(line.id, { qty_sold: e.target.value ? Number(e.target.value) : 0 })
               }
             />
             <div className="border border-slate-200 px-2 py-1 text-right font-semibold text-slate-700">
@@ -905,10 +907,11 @@ function YoghurtRecord({
               className="border border-slate-200 px-2 py-1 text-right"
               type="number"
               disabled={locked}
-              value={nonContainer.volume_sold ?? 0}
+              placeholder="0"
+              value={nonContainer.volume_sold && nonContainer.volume_sold > 0 ? nonContainer.volume_sold : ''}
               onChange={(e) =>
                 onUpdate("yoghurt_non_container", nonContainer.id, {
-                  volume_sold: Number(e.target.value),
+                  volume_sold: e.target.value ? Number(e.target.value) : 0,
                 })
               }
             />
@@ -947,10 +950,11 @@ function YoghurtRecord({
               className="border border-slate-200 px-2 py-1 text-right"
               type="number"
               disabled={locked || row.source === "pastries"}
-              value={row.qty_sold ?? 0}
+              placeholder="0"
+              value={row.qty_sold && row.qty_sold > 0 ? row.qty_sold : ''}
               onChange={(e) =>
                 onUpdate("yoghurt_section_b_income", row.id, {
-                  qty_sold: Number(e.target.value),
+                  qty_sold: e.target.value ? Number(e.target.value) : 0,
                 })
               }
             />
@@ -1017,9 +1021,10 @@ function YoghurtLines({
             className="border border-slate-200 px-2 py-1 text-right"
             type="number"
             disabled={locked}
-            value={line.qty_sold ?? 0}
+            placeholder="0"
+            value={line.qty_sold && line.qty_sold > 0 ? line.qty_sold : ''}
             onChange={(e) =>
-              onUpdate(table, line.id, { qty_sold: Number(e.target.value) })
+              onUpdate(table, line.id, { qty_sold: e.target.value ? Number(e.target.value) : 0 })
             }
           />
           <div className="border border-slate-200 px-2 py-1 text-right">
@@ -1104,9 +1109,10 @@ function MaterialsRecord({
             className="border border-slate-200 px-2 py-1 text-right"
             type="number"
             disabled={locked}
-            value={line.opening ?? 0}
+            placeholder="0"
+            value={line.opening && line.opening > 0 ? line.opening : ''}
             onChange={(e) =>
-              onChange(line.id, { opening: Number(e.target.value) })
+              onChange(line.id, { opening: e.target.value ? Number(e.target.value) : 0 })
             }
           />
           <div className="flex border border-slate-200">
@@ -1115,9 +1121,9 @@ function MaterialsRecord({
               type="number"
               placeholder="Qty"
               disabled={locked}
-              value={line.received ?? 0}
+              value={line.received && line.received > 0 ? line.received : ''}
               onChange={(e) =>
-                onChange(line.id, { received: Number(e.target.value) })
+                onChange(line.id, { received: e.target.value ? Number(e.target.value) : 0 })
               }
             />
             {locked ? (
@@ -1151,9 +1157,9 @@ function MaterialsRecord({
               type="number"
               placeholder="Qty"
               disabled={locked}
-              value={line.transferred_out ?? 0}
+              value={line.transferred_out && line.transferred_out > 0 ? line.transferred_out : ''}
               onChange={(e) =>
-                onChange(line.id, { transferred_out: Number(e.target.value) })
+                onChange(line.id, { transferred_out: e.target.value ? Number(e.target.value) : 0 })
               }
             />
             {locked ? (
@@ -1185,18 +1191,20 @@ function MaterialsRecord({
             className="border border-slate-200 px-2 py-1 text-right"
             type="number"
             disabled={locked}
-            value={line.used_normal ?? 0}
+            placeholder="0"
+            value={line.used_normal && line.used_normal > 0 ? line.used_normal : ''}
             onChange={(e) =>
-              onChange(line.id, { used_normal: Number(e.target.value) })
+              onChange(line.id, { used_normal: e.target.value ? Number(e.target.value) : 0 })
             }
           />
           <input
             className="border border-slate-200 px-2 py-1 text-right"
             type="number"
             disabled={locked}
-            value={line.used_spoilt ?? 0}
+            placeholder="0"
+            value={line.used_spoilt && line.used_spoilt > 0 ? line.used_spoilt : ''}
             onChange={(e) =>
-              onChange(line.id, { used_spoilt: Number(e.target.value) })
+              onChange(line.id, { used_spoilt: e.target.value ? Number(e.target.value) : 0 })
             }
           />
           <div className="border border-slate-200 px-2 py-1 text-right">
@@ -1262,9 +1270,10 @@ function CurrencyNotesRecord({
             className="border border-slate-200 px-2 py-1 text-right"
             type="number"
             disabled={locked}
-            value={note.quantity ?? 0}
+            placeholder="0"
+            value={note.quantity && note.quantity > 0 ? note.quantity : ''}
             onChange={(e) =>
-              onChange(note.id, { quantity: Number(e.target.value) })
+              onChange(note.id, { quantity: e.target.value ? Number(e.target.value) : 0 })
             }
           />
           <div className="border border-slate-200 px-2 py-1 text-right font-semibold text-slate-800">
@@ -1472,8 +1481,9 @@ function Field({
         className="rounded-md border border-slate-300 px-3 py-2 text-right text-sm shadow-sm focus:border-slate-500 focus:outline-none"
         type="number"
         disabled={disabled}
-        value={value ?? 0}
-        onChange={(e) => onChange(Number(e.target.value))}
+        placeholder="0"
+        value={value && value > 0 ? value : ''}
+        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : 0)}
       />
     </label>
   );

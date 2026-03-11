@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { OpenTodaySheetButton } from "@/app/components/OpenTodaySheetButton";
 import { BranchSelector } from "@/app/components/BranchSelector";
+import { FieldSupervisorSheetCreator } from "@/app/components/FieldSupervisorSheetCreator";
 
 export default async function Home() {
   const supabase = createServerSupabaseClient();
@@ -245,12 +246,14 @@ export default async function Home() {
           </div>
           <div className="mx-auto max-w-6xl px-6 py-8">
             <div className="mb-8">
-              <h2 className="text-xl font-semibold text-slate-900">Select Branch to Record Sheet</h2>
+              <h2 className="text-xl font-semibold text-slate-900">Create New Sheet</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Choose a branch to create or view today&apos;s sheet
+                Select branch and date to record a sheet (back dating allowed)
               </p>
             </div>
-            <BranchSelector branches={branches || []} />
+            <div className="mb-8">
+              <FieldSupervisorSheetCreator />
+            </div>
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-slate-900">Recent Sheets</h2>
               <p className="mt-1 text-sm text-slate-600">

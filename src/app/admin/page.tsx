@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { FieldSupervisorSheetCreator } from "@/app/components/FieldSupervisorSheetCreator";
 
 export default async function AdminPage() {
   const supabase = createServerSupabaseClient();
@@ -88,6 +89,19 @@ export default async function AdminPage() {
       </div>
 
       <div className="mx-auto max-w-7xl px-6 py-8">
+        {/* Sheet Creation Section for Supervisors */}
+        {profile.role === "supervisor" && (
+          <div className="mb-8">
+            <div className="mb-4">
+              <h2 className="text-2xl font-bold text-slate-900">Sheet Recording</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Create new sheets for any branch with date selection
+              </p>
+            </div>
+            <FieldSupervisorSheetCreator />
+          </div>
+        )}
+
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-slate-900">Management</h2>
           <p className="mt-1 text-sm text-slate-600">

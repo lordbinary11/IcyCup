@@ -61,26 +61,14 @@ export function canEditSheet(
     };
   }
   
-  // Supervisors can edit sheets from 12:00 AM onwards (next day)
+  // Supervisors can edit any sheet regardless of date
   if (userRole === 'supervisor') {
-    if (canSupervisorEdit(sheetDate)) {
-      return { canEdit: true };
-    }
-    return { 
-      canEdit: false, 
-      reason: 'Supervisors can only edit sheets from the next day onwards' 
-    };
+    return { canEdit: true };
   }
   
-  // Field supervisors follow same rules as branch users
+  // Field supervisors can edit any sheet regardless of date
   if (userRole === 'field_supervisor') {
-    if (canBranchUserEdit(sheetDate)) {
-      return { canEdit: true };
-    }
-    return { 
-      canEdit: false, 
-      reason: 'Field supervisors can only edit sheets on the same day before midnight' 
-    };
+    return { canEdit: true };
   }
   
   return { canEdit: false, reason: 'Unknown user role' };
@@ -116,23 +104,11 @@ export function getEditabilityMessage(
   }
   
   if (userRole === 'supervisor') {
-    if (today.getTime() > sheet.getTime()) {
-      return `You can edit this sheet${submittedNote}. All edits are logged.`;
-    } else if (sheet.getTime() === today.getTime()) {
-      return 'Supervisors can edit this sheet from tomorrow (12:00 AM) onwards.';
-    } else {
-      return 'This sheet is for a future date.';
-    }
+    return `You can edit this sheet${submittedNote}. All edits are logged.`;
   }
   
   if (userRole === 'field_supervisor') {
-    if (sheet.getTime() === today.getTime()) {
-      return `You can edit this sheet until 11:59 PM today${submittedNote}.`;
-    } else if (sheet.getTime() > today.getTime()) {
-      return 'This sheet is for a future date.';
-    } else {
-      return 'Field supervisors can only edit sheets on the same day. This sheet is now read-only.';
-    }
+    return `You can edit this sheet${submittedNote}. All edits are logged.`;
   }
   
   return '';

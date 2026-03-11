@@ -44,6 +44,9 @@ select i.id,
          when i.code = 'YOG_0_42L_CUP'         then 0.42
          when i.code = 'YOG_350ML_BOTTLE'      then 0.35
          when i.code = 'YOG_500ML_BOTTLE'      then 0.50
+         when i.code = 'YOG_REFILL_1_2L_GALLON' then 1.2
+         when i.code = 'YOG_REFILL_2_2L_GALLON' then 2.2
+         when i.code = 'YOG_REFILL_4_6L_GALLON' then 4.6
          else 1
        end as volume_factor,
        case

@@ -335,8 +335,6 @@ export async function submitSheet(
       .from("yoghurt_container_lines")
       .update({
         qty_sold: line.qty_sold,
-        volume_sold: line.volume_sold,
-        income: line.income,
       })
       .eq("id", line.id);
     if (error) throw new Error(`Yoghurt container update failed: ${error.message}`);
@@ -349,8 +347,6 @@ export async function submitSheet(
       .from("yoghurt_refill_lines")
       .update({
         qty_sold: line.qty_sold,
-        volume_sold: line.volume_sold,
-        income: line.income,
       })
       .eq("id", line.id);
     if (error) throw new Error(`Yoghurt refill update failed: ${error.message}`);
