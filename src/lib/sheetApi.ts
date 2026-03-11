@@ -322,7 +322,7 @@ export async function submitSheet(
     const { opening_stock, stock_received, total_stock, closing_stock } = payload.yoghurtHeader;
     
     // Check if yoghurt header exists first
-    const { data: existingHeader, error: checkError } = await (client as any)
+    const { data: existingHeader, error: checkError } = await client
       .from("yoghurt_headers")
       .select("sheet_id")
       .eq("sheet_id", sheetId)
@@ -336,7 +336,7 @@ export async function submitSheet(
     if (!existingHeader) {
       console.log("Yoghurt header not found, creating new one");
       // Create the yoghurt header if it doesn't exist
-      const { error: insertError } = await (client as any)
+      const { error: insertError } = await client
         .from("yoghurt_headers")
         .insert({
           sheet_id: sheetId,
@@ -353,7 +353,7 @@ export async function submitSheet(
     } else {
       console.log("Updating existing yoghurt header");
       // Update existing yoghurt header
-      const { error } = await (client as any)
+      const { error } = await client
         .from("yoghurt_headers")
         .update({
           opening_stock: opening_stock ?? 0,

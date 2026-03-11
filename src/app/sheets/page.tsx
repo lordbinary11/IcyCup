@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
+import { SheetFilters } from "@/app/components/SheetFilters";
 
 type SearchParams = {
   branch?: string;
@@ -62,6 +63,12 @@ export default async function SheetsList({
 
   const { data: sheets, error } = await query;
 
+  // Fetch branches for filter dropdown
+  const { data: branches } = await supabase
+    .from("branches")
+    .select("id, name, code")
+    .order("name", { ascending: true });
+
   if (error) {
     return (
       <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -99,6 +106,8 @@ export default async function SheetsList({
           </p>
         )}
 
+        <SheetFilters branches={branches || []} />
+
         <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-600">
@@ -106,7 +115,7 @@ export default async function SheetsList({
                 <th className="px-4 py-2 text-left">Date</th>
                 <th className="px-4 py-2 text-left">Branch</th>
                 <th className="px-4 py-2 text-left">Status</th>
-                <th className="px-4 py-2 text-right">Grand Total</th>
+                {/* <th className="px-4 py-2 text-right">Grand Total</th> */}
                 <th className="px-4 py-2 text-left">Actions</th>
               </tr>
             </thead>
@@ -140,9 +149,9 @@ export default async function SheetsList({
                         );
                       })()}
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    {/* <td className="px-4 py-2 text-right">
                       {Number(sheet.grand_total ?? 0).toFixed(2)}
-                    </td>
+                    </td> */}
                     <td className="px-4 py-2">
                       <Link
                         href={`/sheets/${sheet.id}`}

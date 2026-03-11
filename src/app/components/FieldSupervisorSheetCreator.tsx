@@ -75,7 +75,7 @@ export function FieldSupervisorSheetCreator() {
 
       setLoading(false);
       router.push(`/sheets/${data}`);
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred");
       setLoading(false);
     }

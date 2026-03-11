@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabaseServer";
 import { OpenTodaySheetButton } from "@/app/components/OpenTodaySheetButton";
-import { BranchSelector } from "@/app/components/BranchSelector";
 import { FieldSupervisorSheetCreator } from "@/app/components/FieldSupervisorSheetCreator";
+import { SheetFilters } from "@/app/components/SheetFilters";
 
 export default async function Home() {
   const supabase = createServerSupabaseClient();
@@ -214,6 +214,9 @@ export default async function Home() {
       .select("id, name, code")
       .order("name", { ascending: true });
 
+    // Note: In Next.js App Router, searchParams would be passed as props
+    // For now, we'll show all sheets without filtering
+
     const { data: sheets } = await supabase
       .from("daily_sheets")
       .select("id, sheet_date, locked, grand_total, branches(name)")
@@ -260,6 +263,7 @@ export default async function Home() {
                 View all submitted sheets across branches
               </p>
             </div>
+            <SheetFilters branches={branches || []} />
             <div className="overflow-hidden rounded-lg border-2 border-slate-900">
               <table className="min-w-full divide-y divide-slate-200 text-sm">
                 <thead className="bg-white text-xs uppercase text-slate-600">
@@ -267,7 +271,7 @@ export default async function Home() {
                     <th className="px-4 py-2 text-left">Date</th>
                     <th className="px-4 py-2 text-left">Branch</th>
                     <th className="px-4 py-2 text-left">Status</th>
-                    <th className="px-4 py-2 text-right">Grand Total</th>
+                    {/* <th className="px-4 py-2 text-right">Grand Total</th> */}
                     <th className="px-4 py-2 text-left">Action</th>
                   </tr>
                 </thead>
@@ -296,9 +300,9 @@ export default async function Home() {
                         );
                       })()}
                     </td>
-                    <td className="px-4 py-2 text-right">
+                    {/* <td className="px-4 py-2 text-right">
                       {Number(s.grand_total ?? 0).toFixed(2)}
-                    </td>
+                    </td> */}
                     <td className="px-4 py-2">
                       <Link
                         href={`/sheets/${s.id}`}
